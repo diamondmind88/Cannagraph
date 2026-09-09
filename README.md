@@ -31,3 +31,6 @@ Implement one numbered slice from the master handoff at a time. Every accepted s
 
 Slice 1 migrations, security boundaries, and verification criteria are documented in
 [`docs/slice-1-canonical-database.md`](docs/slice-1-canonical-database.md).
+
+The real-data public route shell is documented in
+[`docs/slice-2-premium-public-shell.md`](docs/slice-2-premium-public-shell.md).
