@@ -1,27 +1,21 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-
 import { Badge } from "@/components/ui/badge";
-import { getPublicEntityBySlug } from "@/lib/public-data";
-
-export const dynamic = "force-dynamic";
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const entity = await getPublicEntityBySlug("cultivar", (await params).slug);
-  return { title: entity ? `${entity.canonicalName} — Cannagraph` : "Cultivar not found — Cannagraph" };
-}
-
-export default async function CultivarPage({ params }: { params: Promise<{ slug: string }> }) {
-  const entity = await getPublicEntityBySlug("cultivar", (await params).slug);
-  if (!entity) notFound();
-
-  return (
-    <article className="mx-auto min-h-[70vh] max-w-[90rem] px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
-      <header className="grid gap-10 border-b border-[var(--line)] pb-12 lg:grid-cols-[1fr_18rem] lg:items-end">
-        <div><Badge tone="supported">Published cultivar</Badge><h1 className="mt-6 text-balance text-5xl font-semibold leading-none tracking-[-0.055em] sm:text-7xl">{entity.canonicalName}</h1><p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)]">{entity.description ?? "This canonical identity has no public narrative summary yet."}</p></div>
-        <dl className="border-l border-[var(--line-strong)] pl-6"><dt className="font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)]">Permanent record ID</dt><dd className="mt-2 font-mono text-sm">{entity.publicId}</dd><dt className="mt-6 font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)]">Record type</dt><dd className="mt-2 text-sm capitalize">{entity.entityType}</dd></dl>
-      </header>
-      <section className="grid gap-6 py-12 md:grid-cols-3">{["Identity", "Lineage", "Evidence"].map((title) => <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6" key={title}><p className="font-mono text-[0.65rem] uppercase tracking-wider text-[var(--accent)]">Research section</p><h2 className="mt-8 text-xl font-semibold">{title}</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Detailed {title.toLowerCase()} research arrives in the next focused build slice.</p></div>)}</section>
-    </article>
-  );
-}
+import { getPublicCultivarResearch, getPublicEntityBySlug } from "@/lib/public-data";
+export const dynamic="force-dynamic";
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const entity=await getPublicEntityBySlug("cultivar",(await params).slug);return{title:entity?`${entity.canonicalName} — Cannagraph`:"Cultivar not found — Cannagraph"};}
+const statusTone=(status:string)=>status==="supported"?"supported" as const:status==="disputed"?"disputed" as const:"neutral" as const;
+const label=(value:string)=>value.replaceAll("_"," ");
+export default async function CultivarPage({params}:{params:Promise<{slug:string}>}){const research=await getPublicCultivarResearch((await params).slug);if(!research)notFound();const{entity,cultivar,names,claims,lineage,descendants,sources}=research;const supportedClaims=claims.filter(c=>c.status==="supported").length;const disputed=claims.filter(c=>c.status==="disputed").length+lineage.filter(r=>r.status==="disputed").length;const evidenceCount=claims.reduce((n,c)=>n+c.evidence.length,0)+lineage.reduce((n,r)=>n+r.evidence.length,0);return <article className="mx-auto min-h-[70vh] max-w-[90rem] px-5 py-12 sm:px-8 sm:py-16 lg:px-12">
+<header className="grid gap-10 border-b border-[var(--line)] pb-12 lg:grid-cols-[1fr_20rem] lg:items-end"><div><Badge tone="supported">Published cultivar</Badge><h1 className="mt-6 break-words text-5xl font-semibold leading-none tracking-[-0.055em] sm:text-7xl">{entity.canonicalName}</h1><p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--muted)]">{entity.description??"No evidenced public narrative summary has been published for this cultivar yet."}</p></div><dl className="border-l border-[var(--line-strong)] pl-6"><dt className="font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)]">Permanent record ID</dt><dd className="mt-2 break-all font-mono text-sm">{entity.publicId}</dd><dt className="mt-6 font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)]">Research snapshot</dt><dd className="mt-2 text-sm">{supportedClaims} supported claims · {evidenceCount} evidence links · {disputed} disputed items</dd></dl></header>
+<section className="grid gap-6 py-10 md:grid-cols-3"><Info title="Origin" value={cultivar?.origin_country_code??"Not yet evidenced"}/><Info title="Introduced" value={cultivar?.year_introduced?.toString()??"Not yet evidenced"}/><Info title="Sources" value={sources.length?`${sources.length} source record${sources.length===1?"":"s"}`:"No linked sources yet"}/></section>
+<Section title="Names & aliases" intro="Names are labels attached to the canonical identity; they are not separate identity keys.">{names.length?<div className="grid gap-3 sm:grid-cols-2">{names.map(n=><div key={n.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"><div className="flex flex-wrap items-center gap-2"><strong>{n.name}</strong><Badge tone={statusTone(n.status)}>{label(n.status)}</Badge></div><p className="mt-2 text-sm capitalize text-[var(--muted)]">{label(n.name_type)}</p></div>)}</div>:<Empty/>}</Section>
+<Section title="Lineage" intro="Only explicit parent relationships are shown. Cannagraph does not guess unknown parent direction.">{lineage.length?<div className="grid gap-3">{lineage.map(r=><div key={r.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs uppercase text-[var(--muted)]">{label(r.parent_role)}</span><Badge tone={statusTone(r.status)}>{label(r.status)}</Badge></div><p className="mt-3 text-lg font-semibold">{r.parent?.slug?<Link className="underline decoration-[var(--line-strong)] underline-offset-4" href={`/cultivars/${r.parent.slug}`}>{r.parent.canonicalName}</Link>:r.parent?.canonicalName??"Parent identity unavailable"}</p><p className="mt-2 text-sm text-[var(--muted)]">{r.evidence.length} linked evidence item{r.evidence.length===1?"":"s"}{r.confidence!=null?` · confidence ${Math.round(r.confidence*100)}%`:""}</p></div>)}</div>:<Empty/>}</Section>
+<Section title="Research claims" intro="Candidate and disputed assertions remain visibly separate from supported findings.">{claims.length?<div className="grid gap-3">{claims.map(c=><div key={c.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"><div className="flex flex-wrap gap-2"><Badge tone={statusTone(c.status)}>{label(c.status)}</Badge><span className="font-mono text-xs uppercase text-[var(--muted)]">{label(c.predicate)}</span></div><p className="mt-3 leading-7">{c.objectEntity?.canonicalName??c.object_text??c.object_number?.toString()??c.object_date??(c.object_boolean==null?"Unknown":String(c.object_boolean))}</p><p className="mt-2 text-sm text-[var(--muted)]">{c.evidence.length} evidence link{c.evidence.length===1?"":"s"}{c.confidence!=null?` · confidence ${Math.round(c.confidence*100)}%`:""}</p></div>)}</div>:<Empty/>}</Section>
+<Section title="Known descendants" intro="Descendants appear only when an explicit lineage relationship points back to this record.">{descendants.length?<div className="flex flex-wrap gap-3">{descendants.map(d=><span key={d.id} className="rounded-full border border-[var(--line)] px-4 py-2 text-sm">{d.child?.canonicalName??"Unavailable identity"} · {label(d.status)}</span>)}</div>:<Empty/>}</Section>
+<Section title="Sources" intro="Source records preserve provenance; a source count is not a vote count and does not erase contradictions.">{sources.length?<ul className="grid gap-3">{sources.map(s=><li key={s.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"><Link className="font-semibold underline decoration-[var(--line-strong)] underline-offset-4" href={`/sources/${s.id}`}>{s.title}</Link><p className="mt-2 text-sm text-[var(--muted)]">{s.publisher??"Publisher not recorded"} · {label(s.sourceType)}</p></li>)}</ul>:<Empty/>}</Section>
+</article>}
+function Section({title,intro,children}:{title:string;intro:string;children:React.ReactNode}){return <section className="border-t border-[var(--line)] py-10"><h2 className="text-2xl font-semibold tracking-tight">{title}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">{intro}</p><div className="mt-6">{children}</div></section>}
+function Info({title,value}:{title:string;value:string}){return <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6"><p className="font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)]">{title}</p><p className="mt-3 text-lg font-semibold">{value}</p></div>}
+function Empty(){return <p className="rounded-xl border border-dashed border-[var(--line-strong)] p-5 text-sm text-[var(--muted)]">Not yet evidenced in the public research record.</p>}
