@@ -3,9 +3,13 @@
 :root {
   --canvas: #f2efe8;
   --surface: #fbfaf6;
+  --surface-muted: #eae6dc;
   --ink: #171a18;
+  --ink-soft: #343a36;
   --muted: #666b66;
+  --muted-light: #858a84;
   --line: #d8d4c9;
+  --line-strong: #bdb8aa;
   --accent: #274b3d;
   --accent-soft: #dce7e0;
   --warning: #8a5a20;
@@ -30,6 +34,34 @@ body {
 }
 
 a { color: inherit; text-decoration: none; }
+
+button, input { font: inherit; }
+
+.archive-orbit {
+  position: absolute;
+  right: -16rem;
+  top: -18rem;
+  width: 52rem;
+  height: 52rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  opacity: 0.7;
+}
+
+.archive-orbit::before,
+.archive-orbit::after {
+  content: "";
+  position: absolute;
+  border: 1px solid var(--line);
+  border-radius: inherit;
+}
+
+.archive-orbit::before { inset: 6rem; }
+.archive-orbit::after { inset: 13rem; background: color-mix(in srgb, var(--accent-soft) 55%, transparent); }
+
+@media (max-width: 767px) {
+  .archive-orbit { right: -31rem; top: -20rem; }
+}
 
 :focus-visible {
   outline: 3px solid #477b67;
