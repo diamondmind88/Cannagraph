@@ -56,3 +56,43 @@ Validation against this branch:
 - OPEN: GitHub Actions previously failed at startup with zero jobs; runner cause is unconfirmed and remote checks must execute.
 
 Acceptance gate: FAIL / incomplete. Keep this PR draft; do not merge or begin Slice 5.
+
+## BUILD REPORT — October 2 continuation
+
+Implemented the remaining code changes for the bounded, inspectable graph:
+
+- Session-wide maximum of 60 nodes and 100 edges, including the initial graph;
+  duplicate/cycle protection retains distinct relationship assertions and focus.
+- Expansion stops at capacity, with a reset control and loading/status/error text.
+- Source evidence is loaded in bounded batches (100 entries per neighborhood)
+  and exposes source/document links, stance, locator, and explicit omissions.
+- Relationships with an endpoint hidden by public entity visibility are omitted;
+  evidence without a visible document and source is omitted. HTTP(S) external
+  document URLs only; rejected relationships remain excluded.
+- Expansion responses are private/no-store because the server client reads cookies.
+- Public RLS remains authoritative. Existing policies publish supported/disputed
+  lineage; candidate status is retained by the client when supplied, but this
+  change does not publish candidate database records or change any policies.
+- Vitest resolves the app's @ alias for real endpoint/component tests.
+
+Acceptance checks:
+
+- PASS: 92 automated tests across 7 files, including 21 added lineage tests.
+- PASS: TypeScript, ESLint, production build, and diff whitespace checks.
+- PASS: tests cover repeated expansion bounds, cycles/duplicates, rejected/dangling
+  relationships, evidence stance/locators, hidden-record projection, unsafe URLs,
+  evidence/edge truncation, query failure propagation, API validation/status/cache,
+  and server-rendered semantic evidence links and native keyboard controls.
+- NOT VERIFIED: live Supabase/RLS integration. Data tests use an in-memory query
+  fixture and simulate hidden query results; they do not prove deployed policies.
+- NOT VERIFIED: desktop/mobile browser appearance or keyboard interaction.
+  Playwright was available but no browser executable was installed; its browser
+  download returned invalid archives. The temporary UI fixture was removed.
+- OPEN: remote CI's previous run for ba7fe201 failed at startup; no application
+  result from that run. Check the new head independently after publication.
+
+A stale local build cache was moved aside after a Turbopack cache panic. The clean
+production build passed. No production data, schema, or publication was changed.
+
+Acceptance gate: FAIL / incomplete pending remote CI, live integration, and
+browser verification. Keep PR #5 draft and do not begin Slice 5.

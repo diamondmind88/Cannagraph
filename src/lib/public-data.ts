@@ -1,10 +1,11 @@
+import type { LineageEdge, LineageNeighborhood } from "@/lib/lineage-graph";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type PublicEntity = { canonicalName: string; description: string | null; entityType: string; id: string; publicId: string; publishedAt: string | null; slug: string | null };
 export type PublicSource = { canonicalUrl: string | null; id: string; publisher: string | null; sourceType: string; title: string };
 export type PublicLineageNode = Pick<PublicEntity,"id"|"publicId"|"canonicalName"|"entityType"|"slug">;
-export type PublicLineageEdge = { id:string; parentEntityId:string; childEntityId:string; parentRole:string; status:string; confidence:number|null };
-export type PublicLineageNeighborhood = { focusId:string; nodes:PublicLineageNode[]; edges:PublicLineageEdge[]; truncated:boolean };
+export type PublicLineageEdge = LineageEdge;
+export type PublicLineageNeighborhood = LineageNeighborhood;
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function safeExternalUrl(value: string | null) { if (!value) return null; try { const url = new URL(value); return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null; } catch { return null; } }
@@ -19,12 +20,34 @@ export async function getPublicLineageNeighborhood(entityId:string,requestedLimi
  if(!UUID_RE.test(entityId))return null; const limit=Math.min(Math.max(Math.trunc(requestedLimit)||12,1),20); const supabase=await createSupabaseServerClient();
  const focus=await supabase.from("entities").select("id, public_id, canonical_name, entity_type, slug").eq("id",entityId).maybeSingle();if(focus.error)throw focus.error;if(!focus.data)return null;
  const [parents,children]=await Promise.all([
-  supabase.from("lineage_relationships").select("id, parent_entity_id, child_entity_id, parent_role, status, confidence").eq("child_entity_id",entityId).neq("status","rejected").limit(limit+1),
-  supabase.from("lineage_relationships").select("id, parent_entity_id, child_entity_id, parent_role, status, confidence").eq("parent_entity_id",entityId).neq("status","rejected").limit(limit+1)
+  supabase.from("lineage_relationships").select("id, parent_entity_id, child_entity_id, parent_role, status, confidence").eq("child_entity_id",entityId).neq("status","rejected").order("id").limit(limit+1),
+  supabase.from("lineage_relationships").select("id, parent_entity_id, child_entity_id, parent_role, status, confidence").eq("parent_entity_id",entityId).neq("status","rejected").order("id").limit(limit+1)
  ]);if(parents.error)throw parents.error;if(children.error)throw children.error;
  const combined=[...parents.data,...children.data];const uniqueEdges=[...new Map(combined.map(edge=>[edge.id,edge])).values()];const truncated=parents.data.length>limit||children.data.length>limit||uniqueEdges.length>limit;const boundedEdges=uniqueEdges.slice(0,limit);
  const relatedIds=[...new Set(boundedEdges.flatMap(edge=>[edge.parent_entity_id,edge.child_entity_id]).filter(id=>id!==entityId))];const related=relatedIds.length?await supabase.from("entities").select("id, public_id, canonical_name, entity_type, slug").in("id",relatedIds):{data:[],error:null};if(related.error)throw related.error;
- return{focusId:entityId,nodes:[mapLineageNode(focus.data),...related.data.map(mapLineageNode)],edges:boundedEdges.map(edge=>({id:edge.id,parentEntityId:edge.parent_entity_id,childEntityId:edge.child_entity_id,parentRole:edge.parent_role,status:edge.status,confidence:edge.confidence})),truncated};
+ const nodes = [mapLineageNode(focus.data), ...related.data.map(mapLineageNode)];
+ const visibleIds = new Set(nodes.map(node => node.id));
+ const visibleEdges = boundedEdges.filter(edge => visibleIds.has(edge.parent_entity_id) && visibleIds.has(edge.child_entity_id));
+ const evidenceLimit = 100;
+ const evidence = visibleEdges.length ? await supabase.from("lineage_evidence").select("id, lineage_relationship_id, source_document_id, stance, locator").in("lineage_relationship_id", visibleEdges.map(edge => edge.id)).order("id").limit(evidenceLimit + 1) : { data: [], error: null };
+ if(evidence.error) throw evidence.error;
+ const boundedEvidence = evidence.data.slice(0, evidenceLimit);
+ const documentIds = [...new Set(boundedEvidence.map(item => item.source_document_id))];
+ const documents = documentIds.length ? await supabase.from("source_documents").select("id, source_id, title, document_url").in("id", documentIds) : { data: [], error: null };
+ if(documents.error) throw documents.error;
+ const sourceIds = [...new Set(documents.data.map(document => document.source_id))];
+ const sources = sourceIds.length ? await supabase.from("sources").select("id, title").in("id", sourceIds) : { data: [], error: null };
+ if(sources.error) throw sources.error;
+ const documentMap = new Map(documents.data.map(document => [document.id, document]));
+ const sourceMap = new Map(sources.data.map(source => [source.id, source]));
+ return { focusId: entityId, nodes, edges: visibleEdges.map(edge => ({ id: edge.id, parentEntityId: edge.parent_entity_id, childEntityId: edge.child_entity_id, parentRole: edge.parent_role, status: edge.status, confidence: edge.confidence,
+   evidence: boundedEvidence.filter(item => item.lineage_relationship_id === edge.id).flatMap(item => {
+     const document = documentMap.get(item.source_document_id);
+     const source = document ? sourceMap.get(document.source_id) : undefined;
+     return document && source ? [{ id: item.id, sourceId: source.id, documentId: document.id, title: document.title ?? source.title, stance: item.stance, locator: item.locator, url: safeExternalUrl(document.document_url) }] : [];
+   })
+ })), truncated, evidenceTruncated: evidence.data.length > evidenceLimit };
+
 }
 
 export async function getPublicCultivarResearch(slug:string){
