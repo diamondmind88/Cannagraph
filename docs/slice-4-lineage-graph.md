@@ -96,3 +96,53 @@ production build passed. No production data, schema, or publication was changed.
 
 Acceptance gate: FAIL / incomplete pending remote CI, live integration, and
 browser verification. Keep PR #5 draft and do not begin Slice 5.
+
+## BUILD REPORT — October 2 verification completed
+
+### CI recovery
+
+The startup annotation identified the concrete cause: repository policy accepts
+only actions from repositories owned by diamondmind88, rejecting checkout@v4 and
+setup-node@v4. The quality workflow now uses native git checkout of the triggering
+SHA on ubuntu-24.04 and verifies the runner's Node.js 22. No action allowlist or
+repository security setting was changed. Run 37091171742 at commit 6e85f4b3 passed
+installation, TypeScript, lint, all 92 tests, and production build.
+
+### Live database
+
+Restored the previously paused existing CannaGraph project. Once ACTIVE_HEALTHY,
+all four expected migrations were present; no migration or schema change was
+needed. Earlier queries during COMING_UP returned empty metadata, so those
+results were not used to alter the database.
+
+The integration gate in supabase/tests/lineage_visibility.sql verifies anonymous
+and authenticated public reads, hidden draft/rejected/candidate assertions,
+evidence-to-document/source visibility, and denied canonical writes. It generates
+fixture UUIDs inside a transaction, uses explicit public IDs, and rolls everything
+back. The gate passed against the live database. Canonical entity, relationship,
+and source counts remained zero after testing; no test record was published.
+
+Production-runtime smoke checks passed for the real-data home, cultivar index,
+search, and missing-public-record lineage API response (404).
+
+### Browser verification
+
+Chromium was recovered from a temporary npm-distributed browser bundle after the
+standard download failed. Production-compiled checks passed at 390, 768, and
+1280 pixel widths. Screenshots were visually inspected. Verified:
+
+- No horizontal page overflow with long cultivar labels.
+- Keyboard opens the semantic relationship/evidence section.
+- Source links and disputed/unknown-role/confidence text are inspectable.
+- Repeated expansion stops at 60 nodes; reset returns to the initial graph.
+- Failed expansion renders an error and controls recover.
+- No client JavaScript errors in these scenarios.
+
+The browser component checks used a temporary route with synthetic fixtures and
+intercepted expansion responses. That route was removed; production public routes
+were separately checked against the real database. This is not a published-site
+or real-cultivar editorial sign-off, and no cannabis facts were fabricated.
+
+Acceptance gate: PASS for the Slice 4 implementation checks recorded above.
+Ready for review; no merge or Slice 5 work performed. A populated real-cultivar
+editorial review and deployment remain separate release work.
