@@ -10,14 +10,26 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      # Repository policy permits only owner-hosted actions. Use native runner
+      # tools rather than broadening the action allowlist or importing actions.
+      - name: Check out the triggering commit
+        env:
+          CHECKOUT_SHA: ${{ github.sha }}
+          CHECKOUT_REPOSITORY: ${{ github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${CHECKOUT_REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "$CHECKOUT_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$CHECKOUT_SHA"
+      - name: Verify runner Node.js
+        run: |
+          node --version
+          npm --version
+          node -e 'if (Number(process.versions.node.split(".")[0]) !== 22) throw new Error("The quality gate requires Node.js 22")'
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
