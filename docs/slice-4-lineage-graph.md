@@ -34,3 +34,25 @@
 The UPDATED Cannagraph Master Build PDF is the governing contract. Slice 4 is limited to interactive lineage exploration. Do not begin Slice 5 authentication or any later slice. The graph must be incrementally loaded and bounded at all times.
 
 At completion append the required BUILD REPORT and PASS/FAIL acceptance checklist. Any acceptance-critical failure blocks merge.
+## BUILD REPORT — October 2, 2026
+
+Resumed draft PR #5 without advancing to another slice. Synchronized the lockfile
+with pinned `@xyflow/react` 12.8.6, mapped non-supported/non-disputed badges to the
+existing `unresolved` tone, and fixed nullable-result narrowing in public research
+queries. No schema, RLS, publication, or credential changes were made.
+
+Validation against this branch:
+
+- PASS: clean dependency installation (`npm ci --ignore-scripts`).
+- PASS: strict TypeScript.
+- PASS: ESLint.
+- PASS: existing automated suite, 71 tests across 3 files.
+- PASS: production build, including the lineage endpoint and cultivar route.
+- PASS: whitespace/diff checks.
+- NOT VERIFIED: hosted desktop/mobile/keyboard graph inspection and live database/RLS integration.
+- NOT VERIFIED: lineage-specific acceptance coverage; the existing suite does not demonstrate all graph behaviors.
+- OPEN: the client accumulates neighborhoods without a total-session node/edge cap; per-request bounds alone do not satisfy bounded-at-all-times exploration.
+- OPEN: graph relationships carry status and confidence but no directly inspectable source evidence in the graph payload.
+- OPEN: GitHub Actions previously failed at startup with zero jobs; runner cause is unconfirmed and remote checks must execute.
+
+Acceptance gate: FAIL / incomplete. Keep this PR draft; do not merge or begin Slice 5.
