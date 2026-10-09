@@ -1,0 +1,39 @@
+name: Gemini research pilot
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Make billable Gemini API calls (requires secret)'
+        type: boolean
+        default: false
+      poll:
+        description: 'Poll live research jobs for completion'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run pilot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIVE: ${{ inputs.live }}
+          POLL: ${{ inputs.poll }}
+        run: |
+          args=""
+          if [ "$LIVE" = "true" ]; then args="$args --live"; fi
+          if [ "$POLL" = "true" ]; then args="$args --poll"; fi
+          python scripts/gemini_research_pilot.py $args
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gemini-research-output
+          path: research-output/
+          retention-days: 14
