@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import sys
 
 BASE = "https://generativelanguage.googleapis.com/v1beta/interactions"
 AGENT = os.getenv("GEMINI_RESEARCH_AGENT", "deep-research-preview-04-2026")
@@ -54,6 +55,7 @@ def main():
     key = os.getenv("GEMINI_API_KEY") if args.live else None
     if args.live and not key:
         p.error("GEMINI_API_KEY must be set for live calls")
+    had_error = False
     for names in batches:
         job = {"local_id": str(uuid.uuid4()), "cultivars": names,
                "status": "planned", "prompt": PROMPT.format(names=", ".join(names))}
@@ -66,6 +68,7 @@ def main():
             job["interaction_id"] = response.get("id")
             job["status"] = response.get("status", "submitted")
             if not job["interaction_id"]:
+                had_error = True
                 job["error"] = "No interaction ID returned"
                 job["response"] = response
                 continue
@@ -78,9 +81,20 @@ def main():
                     time.sleep(args.interval)
                 else:
                     job["status"] = "poll_timeout"
+            if job["status"] in ("failed", "cancelled", "poll_timeout"):
+                had_error = True
+            if job["status"] == "completed":
+                steps = response.get("steps", [])
+                text = "\n\n".join(c.get("text", "") for step in steps[-1:] for c in step.get("content", []) if c.get("type") == "text")
+                if not text.strip():
+                    job["error"] = "Completed job has no report text"
+                    had_error = True
+                else:
+                    (out / (job["local_id"] + ".md")).write_text(text, encoding="utf-8")
             (out / (job["local_id"] + ".json")).write_text(
                 json.dumps(response, indent=2), encoding="utf-8")
         except (urllib.error.URLError, ValueError, OSError) as exc:
+            had_error = True
             job["status"] = "error"
             job["error"] = str(exc)
         finally:
@@ -91,6 +105,8 @@ def main():
                       "jobs": [{k: v for k, v in j.items() if k in
                                 ("local_id", "cultivars", "status", "interaction_id", "error")}
                                for j in manifest["jobs"]]}, indent=2))
+    if had_error:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
