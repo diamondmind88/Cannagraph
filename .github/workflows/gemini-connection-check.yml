@@ -1,0 +1,37 @@
+name: Gemini connection check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/gemini-connection-check.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify saved Gemini key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        shell: python
+        run: |
+          import json, os, sys, urllib.request, urllib.error
+          key = os.environ.get("GEMINI_API_KEY", "").strip()
+          if not key:
+              sys.exit("GEMINI_API_KEY is missing or empty.")
+          req = urllib.request.Request(
+              "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+              headers={"x-goog-api-key": key})
+          try:
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  data = json.load(response)
+          except urllib.error.HTTPError as exc:
+              sys.exit(f"Gemini rejected the connection check (HTTP {exc.code}). Check the key and API restrictions.")
+          except (urllib.error.URLError, ValueError):
+              sys.exit("Gemini connection check failed: network or response error.")
+          if not data.get("models"):
+              sys.exit("Gemini responded but returned no accessible models.")
+          print("Gemini API key accepted. Model listing succeeded; no generation or research job was started.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("Gemini API connection verified. No generation or research jobs were started.\n")
