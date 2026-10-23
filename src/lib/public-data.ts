@@ -27,7 +27,7 @@ export async function getPublicCultivarResearch(slug:string){
   claimIds.length?supabase.from("claim_evidence").select("claim_id, source_document_id, stance, locator").in("claim_id",claimIds):Promise.resolve({data:[],error:null}),
   lineageIds.length?supabase.from("lineage_evidence").select("lineage_relationship_id, source_document_id, stance, locator").in("lineage_relationship_id",lineageIds):Promise.resolve({data:[],error:null})
  ]); if(claimEvidence.error)throw claimEvidence.error;if(lineageEvidence.error)throw lineageEvidence.error;
- const documentIds=[...new Set([...nameRows.flatMap(n=>n.source_document_id?[n.source_document_id]:[]),...claimEvidence.data.map(e=>e.source_document_id),...lineageEvidence.data.map(e=>e.source_document_id)])];
+ const documentIds=[...new Set([...nameRows.flatMap(n=>n.source_document_id?[n.source_document_id]:[]),...(claimEvidence.data??[]).map(e=>e.source_document_id),...(lineageEvidence.data??[]).map(e=>e.source_document_id)])];
  const documents=documentIds.length?await supabase.from("source_documents").select("id, source_id, title, document_url, published_at, retrieved_at, relationship_type").in("id",documentIds):{data:[],error:null};if(documents.error)throw documents.error;
  const sourceIds=[...new Set(documents.data.map(d=>d.source_id))]; const sources=sourceIds.length?await supabase.from("sources").select("id, title, publisher, source_type, canonical_url").in("id",sourceIds):{data:[],error:null};if(sources.error)throw sources.error;
  const sourceMap=new Map(sources.data.map(s=>[s.id,{id:s.id,title:s.title,publisher:s.publisher,sourceType:s.source_type,canonicalUrl:safeExternalUrl(s.canonical_url)}]));
