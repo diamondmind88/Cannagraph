@@ -12,6 +12,7 @@ export default function PublicLayout({ children }: Readonly<{ children: React.Re
           </Link>
           <div className="ml-auto hidden flex-1 justify-center md:flex"><SearchBox compact /></div>
           <nav aria-label="Primary navigation" className="ml-auto flex items-center gap-1 text-sm md:ml-0">
+            <Link href="/explore" className="rounded-full px-3 py-2 text-[var(--muted)] transition hover:bg-[var(--surface)] hover:text-[var(--ink)]">Explore</Link>
             <Link href="/cultivars" className="rounded-full px-3 py-2 text-[var(--muted)] transition hover:bg-[var(--surface)] hover:text-[var(--ink)]">Cultivars</Link>
             <Link href="/search" className="rounded-full px-3 py-2 text-[var(--muted)] transition hover:bg-[var(--surface)] hover:text-[var(--ink)] md:hidden">Search</Link>
             <span className="hidden rounded-full border border-[var(--line)] px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-wider text-[var(--muted)] sm:inline-flex">Public beta</span>
