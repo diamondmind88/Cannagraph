@@ -34,3 +34,9 @@ Slice 1 migrations, security boundaries, and verification criteria are documente
 
 The real-data public route shell is documented in
 [`docs/slice-2-premium-public-shell.md`](docs/slice-2-premium-public-shell.md).
+
+## Community prototype
+
+`/reviews` and `/journals` provide a browser-local notebook for contextual review drafts and dated run observations. Records are saved only in the current browser, with JSON export; they are not account-private, synced, or published. Photos and cloud accounts are not implemented.
+
+See the [architecture impact review](docs/community-architecture-impact-review.md) and [build report](docs/community-prototype-build-report.md) for scope, integration boundaries, and remaining browser acceptance checks.
