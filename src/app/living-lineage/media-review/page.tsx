@@ -3,12 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { sourDieselMediaCandidates } from "@/lib/living-lineage/media-candidates";
+import { evaluateReference, type ReviewResult } from "@/lib/living-lineage/reference-evaluation";
 
 type Decision = "unreviewed" | "shortlist" | "reject";
+const checks: { key: keyof ReviewResult; label: string }[] = [
+  { key: "wholePlantVisible", label: "Whole plant visible" },
+  { key: "multipleAngles", label: "Multiple angles of same plant" },
+  { key: "growthStageKnown", label: "Growth stage documented" },
+  { key: "trainingKnown", label: "Training method documented" },
+  { key: "scaleKnown", label: "Scale or dimensions documented" },
+  { key: "sourceAttributed", label: "Original author attributed" },
+  { key: "identityEvidence", label: "Cultivar identity supported" },
+  { key: "reusePermission", label: "Reuse permission evidence located" }
+];
+const emptyReview: ReviewResult = { wholePlantVisible:false, multipleAngles:false, growthStageKnown:false, trainingKnown:false, scaleKnown:false, sourceAttributed:false, identityEvidence:false, reusePermission:false };
 
 export default function MediaReviewPage() {
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [reviews, setReviews] = useState<Record<string, ReviewResult>>({});
   const reviewed = Object.values(decisions).filter(x => x !== "unreviewed").length;
   function exportReview() {
     const payload = {
@@ -18,7 +31,8 @@ export default function MediaReviewPage() {
       records: sourDieselMediaCandidates.map(c => ({
         id: c.id, sourcePage: c.sourcePage, reportedLine: c.reportedLine,
         rights: c.rights, identity: c.identity,
-        decision: decisions[c.id] ?? "unreviewed", reviewerNotes: notes[c.id] ?? ""
+        decision: decisions[c.id] ?? "unreviewed", reviewerNotes: notes[c.id] ?? "",
+        checks: reviews[c.id] ?? emptyReview, evaluation: evaluateReference(c, reviews[c.id] ?? emptyReview)
       }))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
@@ -45,6 +59,10 @@ export default function MediaReviewPage() {
           <p className="mt-3 text-sm text-[#c3d5c6]">{c.notes}</p>
           <p className="mt-2 text-xs text-[#aac3af]">Views: {c.view} · Training: {c.training} · Identity: {c.identity}</p>
           <a href={c.sourcePage} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-sm font-semibold text-[#d0e8c5] underline">Inspect original source ↗</a>
+          <fieldset className="mt-5 rounded-xl border border-[#46664b] p-3"><legend className="px-2 text-sm font-medium">Reference verification checklist</legend>
+            <div className="grid gap-3 sm:grid-cols-2">{checks.map(item => <label key={item.key} className="flex items-start gap-2 text-sm"><input type="checkbox" checked={(reviews[c.id] ?? emptyReview)[item.key]} onChange={e => setReviews(prev => ({ ...prev, [c.id]: { ...(prev[c.id] ?? emptyReview), [item.key]: e.target.checked } }))} /><span>{item.label}</span></label>)}</div>
+            {(() => { const score = evaluateReference(c, reviews[c.id] ?? emptyReview); return <div className="mt-4 text-sm" aria-live="polite"><p>Morphology: <strong>{score.morphologyScore}/100</strong> · Provenance: <strong>{score.provenanceScore}/100</strong></p><p className="mt-1">{score.suitableForStructure ? "Suitable for structure study" : "Not yet suitable for structure study"} · {score.canPublishImage ? "Publication rights reviewed" : "Do not republish image"}</p>{score.warnings.length > 0 && <p className="mt-2 text-xs text-[#f0c8a7]">{score.warnings.join(" · ")}</p>}</div>; })()}
+          </fieldset>
           <fieldset className="mt-5">
             <legend className="text-sm font-medium">Review decision</legend>
             <div className="mt-2 flex flex-wrap gap-4">{(["unreviewed","shortlist","reject"] as const).map(choice => <label key={choice} className="flex items-center gap-2 text-sm"><input type="radio" name={c.id} checked={(decisions[c.id] ?? "unreviewed") === choice} onChange={()=>setDecisions(prev=>({...prev,[c.id]:choice}))} />{choice}</label>)}</div>
