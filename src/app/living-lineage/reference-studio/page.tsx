@@ -21,6 +21,9 @@ export default function ReferenceStudio() {
   const [reference, setReference] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [sourceNotes, setSourceNotes] = useState("");
+  const [bounds, setBounds] = useState({ left: 20, right: 80, top: 10, bottom: 90 });
+  const [boundsConfirmed, setBoundsConfirmed] = useState(false);
+  const measuredRatio = (bounds.right - bounds.left) / Math.max(1, bounds.bottom - bounds.top);
   const [calibration, setCalibration] = useState<"unmeasured" | "provisional" | "manual">("unmeasured");
   const h = 180 + traits.height * 2;
   const spread = 35 + traits.width * 1.25;
@@ -48,11 +51,12 @@ export default function ReferenceStudio() {
             <input type="file" accept="image/*" className="sr-only" onChange={e => {
               const file = e.target.files?.[0]; if (!file) return;
               if (reference) URL.revokeObjectURL(reference);
-              setReference(URL.createObjectURL(file)); setFileName(file.name);
+              setReference(URL.createObjectURL(file)); setFileName(file.name); setBoundsConfirmed(false);
             }} />
           </label>
           <label className="mt-4 block text-sm">Photo observation notes<textarea rows={3} value={sourceNotes} onChange={e=>setSourceNotes(e.target.value)} placeholder="Specific week/frame, branch shape, training, image attribution..." className="mt-2 w-full rounded-lg border border-[#68876c] bg-[#07110a] p-3"/></label>
-          <div className="mt-4 flex min-h-[340px] items-center justify-center overflow-hidden rounded-xl bg-[#07110a]">
+          {reference && <div className="mt-4 rounded-xl border border-[#68876c] p-3"><p className="text-sm font-semibold">Manual plant bounding box</p><p className="mt-1 text-xs text-[#b9cfbd]">Set boundaries as percentages of the entire image, excluding the pot and background. Use only when the whole plant is visible.</p>{(["left","right","top","bottom"] as const).map(key => <label key={key} className="mt-2 block text-xs capitalize">{key}: {bounds[key]}%<input type="range" min="0" max="100" value={bounds[key]} onChange={e=>{setBounds(prev=>({...prev,[key]:Number(e.target.value)}));setBoundsConfirmed(false);}} className="w-full accent-[#9bcd9b]"/></label>)}<p className="mt-2 text-sm">Image-space canopy width ÷ height: <strong>{bounds.left < bounds.right && bounds.top < bounds.bottom ? measuredRatio.toFixed(2) : "Invalid bounds"}</strong></p><label className="mt-2 flex gap-2 text-xs"><input type="checkbox" checked={boundsConfirmed} disabled={bounds.left >= bounds.right || bounds.top >= bounds.bottom} onChange={e=>setBoundsConfirmed(e.target.checked)}/>I inspected the image and positioned the bounds manually</label></div>}
+          <div className="relative mt-4 flex min-h-[340px] items-center justify-center overflow-hidden rounded-xl bg-[#07110a]">
             {reference ? <img src={reference} alt={`Selected plant reference: ${fileName}`} className="max-h-[520px] w-full object-contain" /> : <p className="px-6 text-center text-sm text-[#a7c2a9]">No reference selected. Use a full-plant side view for the first comparison.</p>}
           </div>
         </section>
@@ -81,7 +85,7 @@ export default function ReferenceStudio() {
             <span className="flex justify-between text-xs text-[#a9c4ae]"><span>{f.low}</span><span>{f.high}</span></span>
           </label>)}</div>
           <button type="button" className="mt-6 w-full rounded-xl border border-[#7d9e7e] px-4 py-3 text-sm" onClick={()=>{setTraits(initial);setCalibration("unmeasured");}}>Reset proportions</button>
-          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,sourcePage:pilotSource,sourceNotes,calibrationStatus:calibration,measurementMethod:calibration==="provisional"?"Grower narrative, not image measurements":calibration==="manual"?"Manual slider adjustment":"None",rights:"unverified",identity:"grower-reported Barney’s Farm Sour Diesel",traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
+          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,sourcePage:pilotSource,sourceNotes,manualImageBounds:reference && boundsConfirmed ? bounds : null,measuredImageWidthHeightRatio:reference && boundsConfirmed ? measuredRatio : null,calibrationStatus:calibration,measurementMethod:calibration==="provisional"?"Grower narrative, not image measurements":calibration==="manual"?"Manual slider adjustment":"None",rights:"unverified",identity:"grower-reported Barney’s Farm Sour Diesel",traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
         </section>
       </div>
     </div>
