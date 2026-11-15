@@ -19,6 +19,7 @@ export default function LivingLineagePrototype() {
         <p style={{ letterSpacing: 3, fontSize: 11, color: "#a8c9b0", marginTop: 28 }}>EXPERIMENTAL EXPERIENCE · DEMONSTRATION</p>
         <h1 style={{ fontSize: "clamp(32px, 7vw, 62px)", margin: "8px 0" }}>The Living Lineage</h1>
         <p style={{ maxWidth: 600, color: "#c3d0c8", lineHeight: 1.6 }}>Explore a living visual metaphor for cannabis genetics. This interaction uses illustrative names and connections, not verified pedigree records or photorealistic 3D assets.</p>
+        <a href="/living-lineage/archive" style={{ display: "inline-block", padding: "12px 18px", border: "1px solid #9bc9a1", borderRadius: 18, color: "#e1f4dc", marginBottom: 8 }}>Explore published archive →</a>
         <div role="group" aria-label="View mode" style={{ display: "flex", gap: 10, margin: "22px 0" }}>
           {(["hero", "family"] as const).map(mode => <button key={mode} type="button" aria-pressed={view === mode} onClick={() => { setView(mode); setActiveBud(null); }} style={{ padding: "12px 16px", borderRadius: 24, border: "1px solid #5b826a", background: view === mode ? "#d9edce" : "#162a20", color: view === mode ? "#152a1b" : "#e9f2e8", cursor: "pointer" }}>{mode === "hero" ? "Single plant" : "Family view"}</button>)}
         </div>
