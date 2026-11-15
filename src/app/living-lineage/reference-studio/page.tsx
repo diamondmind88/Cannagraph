@@ -5,6 +5,7 @@ import Link from "next/link";
 
 const initial = { height: 70, width: 54, branchAngle: 48, internode: 52, leafWidth: 42, flowerDensity: 60 };
 type Trait = keyof typeof initial;
+const pilotSource = "https://growdiaries.com/diaries/223385-sour-diesel-grow-journal-by-budhunter/week/1282387?lnk=0";
 const fields: { key: Trait; label: string; low: string; high: string }[] = [
   { key: "height", label: "Relative height", low: "Short", high: "Tall" },
   { key: "width", label: "Canopy width", low: "Narrow", high: "Wide" },
@@ -18,6 +19,7 @@ export default function ReferenceStudio() {
   const [traits, setTraits] = useState(initial);
   const [reference, setReference] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
+  const [sourceNotes, setSourceNotes] = useState("");
   const h = 180 + traits.height * 2;
   const spread = 35 + traits.width * 1.25;
   const branchRise = 20 + (100 - traits.branchAngle) * .75;
@@ -38,6 +40,7 @@ export default function ReferenceStudio() {
         <section className="rounded-2xl border border-[#47664e] bg-[#14281c] p-4">
           <h2 className="text-lg font-semibold">1 · Reference photo</h2>
           <p className="mt-2 text-sm text-[#b9cfbd]">Choose a full-plant image on your device. It stays in this browser session.</p>
+          <div className="mt-4 rounded-xl border border-[#68876c] p-3 text-sm"><p className="font-semibold">Pilot: Barney’s Farm Sour Diesel · Budhunter</p><p className="mt-1 text-[#b9cfbd]">Grower-reported seed line, not verified ECSD. Image permissions and exact full-plant framing remain unverified.</p><a href={pilotSource} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block underline">Inspect original grow journal ↗</a></div>
           <label className="mt-5 block cursor-pointer rounded-xl border border-dashed border-[#7a9b7d] p-4 text-center text-sm">Select local image
             <input type="file" accept="image/*" className="sr-only" onChange={e => {
               const file = e.target.files?.[0]; if (!file) return;
@@ -45,6 +48,7 @@ export default function ReferenceStudio() {
               setReference(URL.createObjectURL(file)); setFileName(file.name);
             }} />
           </label>
+          <label className="mt-4 block text-sm">Photo observation notes<textarea rows={3} value={sourceNotes} onChange={e=>setSourceNotes(e.target.value)} placeholder="Specific week/frame, branch shape, training, image attribution..." className="mt-2 w-full rounded-lg border border-[#68876c] bg-[#07110a] p-3"/></label>
           <div className="mt-4 flex min-h-[340px] items-center justify-center overflow-hidden rounded-xl bg-[#07110a]">
             {reference ? <img src={reference} alt={`Selected plant reference: ${fileName}`} className="max-h-[520px] w-full object-contain" /> : <p className="px-6 text-center text-sm text-[#a7c2a9]">No reference selected. Use a full-plant side view for the first comparison.</p>}
           </div>
@@ -73,7 +77,7 @@ export default function ReferenceStudio() {
             <span className="flex justify-between text-xs text-[#a9c4ae]"><span>{f.low}</span><span>{f.high}</span></span>
           </label>)}</div>
           <button type="button" className="mt-6 w-full rounded-xl border border-[#7d9e7e] px-4 py-3 text-sm" onClick={()=>setTraits(initial)}>Reset proportions</button>
-          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
+          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,sourcePage:pilotSource,sourceNotes,rights:"unverified",identity:"grower-reported Barney’s Farm Sour Diesel",traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
         </section>
       </div>
     </div>
