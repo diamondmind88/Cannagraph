@@ -5,6 +5,7 @@ import Link from "next/link";
 
 const initial = { height: 70, width: 54, branchAngle: 48, internode: 52, leafWidth: 42, flowerDensity: 60 };
 type Trait = keyof typeof initial;
+const provisional = { height: 80, width: 48, branchAngle: 38, internode: 56, leafWidth: 42, flowerDensity: 68 };
 const pilotSource = "https://growdiaries.com/diaries/223385-sour-diesel-grow-journal-by-budhunter/week/1282387?lnk=0";
 const fields: { key: Trait; label: string; low: string; high: string }[] = [
   { key: "height", label: "Relative height", low: "Short", high: "Tall" },
@@ -20,6 +21,7 @@ export default function ReferenceStudio() {
   const [reference, setReference] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [sourceNotes, setSourceNotes] = useState("");
+  const [calibration, setCalibration] = useState<"unmeasured" | "provisional" | "manual">("unmeasured");
   const h = 180 + traits.height * 2;
   const spread = 35 + traits.width * 1.25;
   const branchRise = 20 + (100 - traits.branchAngle) * .75;
@@ -41,6 +43,7 @@ export default function ReferenceStudio() {
           <h2 className="text-lg font-semibold">1 · Reference photo</h2>
           <p className="mt-2 text-sm text-[#b9cfbd]">Choose a full-plant image on your device. It stays in this browser session.</p>
           <div className="mt-4 rounded-xl border border-[#68876c] p-3 text-sm"><p className="font-semibold">Pilot: Barney’s Farm Sour Diesel · Budhunter</p><p className="mt-1 text-[#b9cfbd]">Grower-reported seed line, not verified ECSD. Image permissions and exact full-plant framing remain unverified.</p><a href={pilotSource} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block underline">Inspect original grow journal ↗</a></div>
+          <button type="button" className="mt-3 rounded-lg border border-[#8ba98c] px-4 py-2 text-sm" onClick={() => { setTraits(provisional); setCalibration("provisional"); setSourceNotes("Provisional interpretation of grower narrative: relatively tall plant, dominant central cola, lateral branches less developed; LST, defoliation and lollipopping documented. NOT measured from image pixels. Review individual frames before using as reference geometry."); }}>Load provisional Sour Diesel shape</button>
           <label className="mt-5 block cursor-pointer rounded-xl border border-dashed border-[#7a9b7d] p-4 text-center text-sm">Select local image
             <input type="file" accept="image/*" className="sr-only" onChange={e => {
               const file = e.target.files?.[0]; if (!file) return;
@@ -67,17 +70,18 @@ export default function ReferenceStudio() {
             <ellipse cx="250" cy={440-h} rx={14+traits.leafWidth*.08} ry={22+traits.flowerDensity*.22} fill="#9cbe7a" stroke="#d0e7a3" strokeWidth="2"/>
             <path d="M130 442 H370" stroke="#516958" strokeWidth="2"/>
           </svg>
+          <p className="mt-3 text-xs text-[#b9cfbd]">Calibration status: {calibration === "provisional" ? "Provisional narrative-based estimate; no pixel measurements" : calibration === "manual" ? "Manually adjusted; not independently verified" : "Unmeasured demonstration"}</p>
           <p className="mt-3 text-xs text-[#b9cfbd]">Geometry is intentionally simplified to test proportions before building a reusable 3D model.</p>
         </section>
         <section className="rounded-2xl border border-[#47664e] bg-[#14281c] p-5">
           <h2 className="text-lg font-semibold">3 · Match the structure</h2>
           <div className="mt-5 space-y-5">{fields.map(f => <label key={f.key} className="block">
             <span className="flex justify-between gap-3 text-sm"><span>{f.label}</span><span className="tabular-nums text-[#bbd5ba]">{traits[f.key]}%</span></span>
-            <input aria-label={f.label} type="range" min="0" max="100" value={traits[f.key]} onChange={e=>setTraits(t=>({...t,[f.key]:Number(e.target.value)}))} className="mt-2 w-full accent-[#9bcd9b]"/>
+            <input aria-label={f.label} type="range" min="0" max="100" value={traits[f.key]} onChange={e=>{setTraits(t=>({...t,[f.key]:Number(e.target.value)}));setCalibration("manual");}} className="mt-2 w-full accent-[#9bcd9b]"/>
             <span className="flex justify-between text-xs text-[#a9c4ae]"><span>{f.low}</span><span>{f.high}</span></span>
           </label>)}</div>
-          <button type="button" className="mt-6 w-full rounded-xl border border-[#7d9e7e] px-4 py-3 text-sm" onClick={()=>setTraits(initial)}>Reset proportions</button>
-          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,sourcePage:pilotSource,sourceNotes,rights:"unverified",identity:"grower-reported Barney’s Farm Sour Diesel",traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
+          <button type="button" className="mt-6 w-full rounded-xl border border-[#7d9e7e] px-4 py-3 text-sm" onClick={()=>{setTraits(initial);setCalibration("unmeasured");}}>Reset proportions</button>
+          <button type="button" className="mt-3 w-full rounded-xl bg-[#cde8bd] px-4 py-3 text-sm font-semibold text-[#173020]" onClick={()=>{const data={schemaVersion:1,subject:"Photographed plant phenotype",referenceFile:fileName||null,sourcePage:pilotSource,sourceNotes,calibrationStatus:calibration,measurementMethod:calibration==="provisional"?"Grower narrative, not image measurements":calibration==="manual"?"Manual slider adjustment":"None",rights:"unverified",identity:"grower-reported Barney’s Farm Sour Diesel",traits,limitations:"Illustrative user-adjusted 2D approximation; not verified 3D morphology or cultivar identity."};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="cannagraph-plant-reference.json";a.click();URL.revokeObjectURL(url);}}>Export structure settings</button>
         </section>
       </div>
     </div>
